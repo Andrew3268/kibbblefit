@@ -1,0 +1,14 @@
+{
+  "name": "kibbblefit-cf-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev ./public --compatibility-date=2026-02-27",
+    "deploy": "wrangler pages deploy ./public --project-name=kibbblefit",
+    "d1:exec": "wrangler d1 execute kibbblefit-db --file=./db/schema.sql",
+    "d1:seed": "wrangler d1 execute kibbblefit-db --file=./db/seed.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

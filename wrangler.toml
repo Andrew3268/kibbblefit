@@ -1,0 +1,7 @@
+name = "kibbblefit"
+compatibility_date = "2026-02-27"
+
+[[d1_databases]]
+binding = "KIB_D1"
+database_name = "kibbblefit-db"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
