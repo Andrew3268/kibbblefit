@@ -4,41 +4,6 @@ export async function onRequestGet({ params, env, request }){
   const slug = String(params.slug || "");
   if (!slug) return new Response("Not Found", { status: 404 });
 
-const url = new URL(request.url);
-const origin = url.origin;
-const cache = caches.default;
-
-// -------------------------
-// ✅ Edge Cache 전략
-// - metaKey: slug의 최신 updated_at(=버전)을 저장
-// - htmlKey: /food/<slug>?v=<version> 형태로 HTML을 저장
-// - 업데이트(POST) 시 meta 업데이트 + 이전 버전 htmlKey 삭제로 즉시 무효화
-// -------------------------
-const metaKey = new Request(`${origin}/__meta/food/${encodeURIComponent(slug)}`, { method: "GET" });
-
-// URL에 v가 있으면(직접 버전 지정) 그 값을 우선 사용
-let version = url.searchParams.get("v") || "";
-
-if (!version) {
-  const metaHit = await cache.match(metaKey);
-  if (metaHit) version = (await metaHit.text()).trim();
-}
-
-const cacheKeyUrl = version
-  ? `${origin}/food/${encodeURIComponent(slug)}?v=${encodeURIComponent(version)}`
-  : `${origin}/food/${encodeURIComponent(slug)}`;
-
-const htmlCacheKey = new Request(cacheKeyUrl, { method: "GET" });
-
-// ✅ 캐시 HIT이면 DB 조회 없이 바로 응답
-const cached = await cache.match(htmlCacheKey);
-if (cached) {
-  const res = new Response(cached.body, cached);
-  res.headers.set("x-kib-cache", "HIT");
-  return res;
-}
-// (여기부터 MISS → DB 조회 후 HTML 생성)
-
   const row = await env.KIB_D1
     .prepare("SELECT slug, name, brand, protein_dm, fat_dm, carb_dm, ingredients_json, updated_at FROM foods WHERE slug = ?")
     .bind(slug)
@@ -172,29 +137,13 @@ if (cached) {
 </body>
 </html>`;
 
-  const res = new Response(html, {
-  headers: {
-    "content-type": "text/html; charset=utf-8",
-    // ✅ Edge 캐시용(Cloudflare) 힌트 + 브라우저 캐시
-    // - s-maxage: CDN/프록시(엣지) 캐시 TTL
-    // - stale-while-revalidate: 만료 후에도 잠깐은 빠르게 응답하면서 백그라운드 갱신 가능(실서비스 체감 개선)
-    "cache-control": "public, max-age=60, s-maxage=1800, stale-while-revalidate=86400"
-  }
-});
-
-// ✅ 캐시 MISS → HTML을 엣지 캐시에 저장
-res.headers.set("x-kib-cache", "MISS");
-// put()은 body를 소비하므로 clone해서 저장
-await cache.put(htmlCacheKey, res.clone());
-
-// ✅ meta(버전)도 함께 저장 (업데이트 시 즉시 무효화를 위해)
-const v = String(row.updated_at || "").trim() || new Date().toISOString();
-await cache.put(
-  metaKey,
-  new Response(v, { headers: { "cache-control": "public, max-age=0, s-maxage=86400" } })
-);
-
-return res;
+  return new Response(html, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      // ✅ 개발 단계 기본 캐시. 운영 시 5~30분 등으로 조절 가능
+      "cache-control": "public, max-age=60"
+    }
+  });
 }
 
 function getOgImageUrl(request){
