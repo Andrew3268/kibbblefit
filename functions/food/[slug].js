@@ -1,7 +1,8 @@
 import { escapeHtml, jsonld, okHtml, edgeCache } from "../_utils.js";
 
 export async function onRequestGet({ params, env, request }){
-  const slug = String(params.slug || "");
+  // const slug = String(params.slug || "");
+  const slug = decodeURIComponent(String(params.slug || ""));
   if (!slug) return okHtml("Not Found", { status: 404 });
 
   // 1) 최소 조회: updated_at만 가져와 캐시 키로 사용 (콘솔에서 직접 UPDATE해도 updated_at 바꾸면 자동 갱신)
