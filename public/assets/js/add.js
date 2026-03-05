@@ -13,21 +13,44 @@ function parseIngredients(raw){
   return String(raw||"").split(",").map(s=>s.trim()).filter(Boolean);
 }
 
+function n(v){
+  const num = Number(v);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function updateSlugPreview(){
+  const name = $("name").value.trim();
+  $("slugPreview").value = name ? slugify(name) : "";
+}
+
 async function save(){
   const status = $("status");
   status.textContent = "저장 중…";
 
   const name = $("name").value.trim();
   const brand = $("brand").value.trim();
-  const protein = Number($("protein").value || 0);
-  const fat = Number($("fat").value || 0);
-  const carb = Number($("carb").value || 0);
-  const ingredients = parseIngredients($("ingredients").value);
+  const life_stage = $("life_stage").value.trim();
 
-  if (!name){ status.textContent = "사료 이름을 입력해주세요."; return; }
+  if (!name){ status.textContent = "사료명을 입력해주세요."; return; }
 
   const slug = slugify(name);
-  const payload = { slug, name, brand, nutrition_dm: { protein, fat, carb }, ingredients };
+
+  const payload = {
+    slug,
+    name,
+    brand,
+    life_stage,
+    ga: {
+      crude_protein: n($("crude_protein").value),
+      crude_fat: n($("crude_fat").value),
+      calcium: n($("calcium").value),
+      phosphorus: n($("phosphorus").value),
+      ash: n($("ash").value),
+      crude_fiber: n($("crude_fiber").value),
+      moisture: n($("moisture").value),
+    },
+    ingredients: parseIngredients($("ingredients").value),
+  };
 
   const res = await fetch("/api/foods", {
     method: "POST",
@@ -46,4 +69,6 @@ async function save(){
   location.href = `/food/${encodeURIComponent(slug)}`;
 }
 
+$("name").addEventListener("input", updateSlugPreview);
 $("saveBtn").addEventListener("click", save);
+updateSlugPreview();

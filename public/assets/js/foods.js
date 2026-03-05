@@ -18,12 +18,17 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
 
+  const num = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
   try {
     show(loadingEl, true);
     show(errorEl, false);
     show(emptyEl, false);
 
-    const res = await fetch("/api/foods", { headers: { "accept": "application/json" } });
+    const res = await fetch("/api/foods", { headers: { accept: "application/json" } });
     if (!res.ok) throw new Error("API 오류: " + res.status);
 
     const data = await res.json();
@@ -42,33 +47,37 @@
     listEl.innerHTML = items.map((it) => {
       const name = escapeHtml(it?.name || "(이름 없음)");
       const brand = escapeHtml(it?.brand || "");
+      const lifeStage = escapeHtml(it?.life_stage || "");
       const slug = String(it?.slug || "");
-      const updated = escapeHtml(it?.updated_at || "");
+      const updated = escapeHtml(String(it?.updated_at || "").slice(0, 10));
 
-      const p = Number(it?.protein_dm ?? 0);
-      const f = Number(it?.fat_dm ?? 0);
-      const c = Number(it?.carb_dm ?? 0);
+      const cp = num(it?.crude_protein);
+      const cf = num(it?.crude_fat);
+      const mo = num(it?.moisture);
 
       return `
-        <a class="card" href="/food/${encodeURIComponent(slug)}" style="text-decoration:none;color:inherit;display:block">
+        <div class="card" style="display:flex;flex-direction:column;gap:10px">
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
             <div>
               <div style="font-weight:1000;letter-spacing:-.2px;font-size:16px;line-height:1.2;margin:0 0 4px">${name}</div>
-              <div class="small" style="opacity:.75">${brand}</div>
+              <div class="small" style="opacity:.75">${brand}${lifeStage ? ` · ${lifeStage}` : ``}</div>
             </div>
             <div class="small" style="opacity:.65;text-align:right;white-space:nowrap">
               ${updated ? `업데이트<br>${updated}` : ""}
             </div>
           </div>
 
-          <div class="sep" style="margin:12px 0"></div>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <span class="badge">조단백 ${cp}%</span>
+            <span class="badge">조지방 ${cf}%</span>
+            <span class="badge">수분 ${mo}%</span>
+          </div>
 
           <div class="row" style="gap:8px;flex-wrap:wrap">
-            <span class="badge">단백질(DM) ${Number.isFinite(p) ? p : 0}</span>
-            <span class="badge">지방(DM) ${Number.isFinite(f) ? f : 0}</span>
-            <span class="badge">탄수(DM) ${Number.isFinite(c) ? c : 0}</span>
+            <a class="btn btn--brand" href="/food/${encodeURIComponent(slug)}">상세 보기</a>
+            <a class="btn" href="/edit.html?slug=${encodeURIComponent(slug)}">수정</a>
           </div>
-        </a>
+        </div>
       `;
     }).join("");
   } catch (err) {

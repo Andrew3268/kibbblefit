@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <title>사료 등록 | 키블핏</title>
+  <title>사료 수정 | 키블핏</title>
   <meta name="robots" content="noindex,nofollow" />
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -42,28 +42,39 @@
 
   <main class="container">
     <section class="card" style="display:flex;flex-direction:column;gap:12px">
-      <h1 class="h1">사료 등록(테스트용)</h1>
-      <p class="p">등록하면 <b>/food/슬러그</b> SSR 페이지가 생성됩니다. 기존 사료 수정은 <b>목록 → 수정</b> 또는 <b>/edit.html?slug=...</b>를 사용하세요.</p>
+      <h1 class="h1">사료 수정(테스트용)</h1>
+      <p class="p">주소창에 <b>/edit.html?slug=...</b> 형태로 들어오면 해당 사료를 불러옵니다.</p>
+
+      <div class="grid grid--2">
+        <div>
+          <label class="small" for="slug">slug</label>
+          <input class="input" id="slug" disabled />
+        </div>
+        <div>
+          <label class="small" for="updated_at">updated_at</label>
+          <input class="input" id="updated_at" disabled />
+        </div>
+      </div>
 
       <div class="grid grid--2">
         <div>
           <label class="small" for="name">사료명</label>
-          <input class="input" id="name" placeholder="예: 웰니스 코어 오리지날" />
+          <input class="input" id="name" />
         </div>
         <div>
           <label class="small" for="brand">브랜드</label>
-          <input class="input" id="brand" placeholder="예: Wellness" />
+          <input class="input" id="brand" />
         </div>
       </div>
 
       <div class="grid grid--2">
         <div>
           <label class="small" for="life_stage">급여연령</label>
-          <input class="input" id="life_stage" placeholder="예: 전연령 / 키튼 / 어덜트 / 시니어" />
+          <input class="input" id="life_stage" />
         </div>
         <div>
-          <label class="small" for="slugPreview">slug(자동)</label>
-          <input class="input" id="slugPreview" disabled />
+          <label class="small" for="cacheHint">캐시 확인</label>
+          <input class="input" id="cacheHint" disabled value="/food/slug 응답 헤더에서 x-kib-cache (HIT/MISS) 확인" />
         </div>
       </div>
 
@@ -73,51 +84,53 @@
       <div class="grid grid--3">
         <div>
           <label class="small" for="crude_protein">조단백질(%)</label>
-          <input class="input" id="crude_protein" type="number" step="0.1" placeholder="예: 36" />
+          <input class="input" id="crude_protein" type="number" step="0.1" />
         </div>
         <div>
           <label class="small" for="crude_fat">조지방(%)</label>
-          <input class="input" id="crude_fat" type="number" step="0.1" placeholder="예: 18" />
+          <input class="input" id="crude_fat" type="number" step="0.1" />
         </div>
         <div>
           <label class="small" for="moisture">수분(%)</label>
-          <input class="input" id="moisture" type="number" step="0.1" placeholder="예: 10" />
+          <input class="input" id="moisture" type="number" step="0.1" />
         </div>
       </div>
 
       <div class="grid grid--4">
         <div>
           <label class="small" for="calcium">칼슘(%)</label>
-          <input class="input" id="calcium" type="number" step="0.01" placeholder="예: 1.2" />
+          <input class="input" id="calcium" type="number" step="0.01" />
         </div>
         <div>
           <label class="small" for="phosphorus">인(%)</label>
-          <input class="input" id="phosphorus" type="number" step="0.01" placeholder="예: 1.0" />
+          <input class="input" id="phosphorus" type="number" step="0.01" />
         </div>
         <div>
           <label class="small" for="ash">조회분(%)</label>
-          <input class="input" id="ash" type="number" step="0.1" placeholder="예: 8" />
+          <input class="input" id="ash" type="number" step="0.1" />
         </div>
         <div>
           <label class="small" for="crude_fiber">조섬유(%)</label>
-          <input class="input" id="crude_fiber" type="number" step="0.1" placeholder="예: 3" />
+          <input class="input" id="crude_fiber" type="number" step="0.1" />
         </div>
       </div>
 
       <div>
         <label class="small" for="ingredients">원료 리스트(콤마로 구분)</label>
-        <textarea class="input" id="ingredients" rows="4" placeholder="예: 닭고기, 칠면조, 닭지방, 완두, 치커리뿌리, 연어오일"></textarea>
+        <textarea class="input" id="ingredients" rows="4"></textarea>
       </div>
 
-      <div class="row">
-        <button class="btn btn--brand" id="saveBtn" type="button">저장하기</button>
+      <div class="row" style="flex-wrap:wrap">
+        <button class="btn btn--brand" id="saveBtn" type="button">수정 저장</button>
+        <a class="btn" id="viewBtn" href="#">상세 보기</a>
+        <a class="btn" href="/foods/">목록</a>
         <span class="small" id="status"></span>
       </div>
 
       <div class="notice">
-        <strong>안내</strong>
+        <strong>팁</strong>
         <div class="sep"></div>
-        <div class="small">테스트 단계에서는 누구나 수정/등록이 가능하니, 운영 전에는 접근 제어를 추천합니다.</div>
+        <div class="small">수정 후에는 <b>updated_at</b>이 바뀌고, 그 값이 캐시 키에 들어가서 새로고침 시 캐시가 자동 갱신됩니다.</div>
       </div>
     </section>
   </main>
@@ -129,6 +142,6 @@
     </div>
   </footer>
 
-  <script type="module" src="/assets/js/add.js"></script>
+  <script type="module" src="/assets/js/edit.js"></script>
 </body>
 </html>

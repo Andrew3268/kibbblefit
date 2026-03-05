@@ -1,54 +1,71 @@
-import { escapeHtml, jsonld } from "../_utils.js";
+import { escapeHtml, jsonld, okHtml, edgeCache } from "../_utils.js";
 
 export async function onRequestGet({ params, env, request }){
   const slug = String(params.slug || "");
-  if (!slug) return new Response("Not Found", { status: 404 });
+  if (!slug) return okHtml("Not Found", { status: 404 });
 
-  const row = await env.KIB_D1
-    .prepare("SELECT slug, name, brand, protein_dm, fat_dm, carb_dm, ingredients_json, updated_at FROM foods WHERE slug = ?")
+  // 1) 최소 조회: updated_at만 가져와 캐시 키로 사용 (콘솔에서 직접 UPDATE해도 updated_at 바꾸면 자동 갱신)
+  const meta = await env.KIB_D1
+    .prepare("SELECT updated_at FROM foods WHERE slug = ?")
     .bind(slug)
     .first();
 
-  if (!row){
-    // ✅ 404는 검색 노출을 막는 편이 안전
-    return new Response(renderNotFound(slug, request), {
+  if (!meta){
+    return okHtml(renderNotFound(slug, request), {
       status: 404,
-      headers: { "content-type":"text/html; charset=utf-8" }
+      headers: { "cache-control": "no-store" }
     });
   }
 
-  const ingredients = safeJson(row.ingredients_json, []);
+  const updatedAt = String(meta.updated_at || "");
+  const url = new URL(request.url);
+  const cacheKeyUrl = `${url.origin}/food/${encodeURIComponent(slug)}?v=${encodeURIComponent(updatedAt)}`;
 
-  // ✅ SEO 기본 문구 (원하면 여기 규칙을 확장해도 됨)
-  const title = `${row.name} 분석 | 키블핏`;
-  const desc  = `${row.name}의 보증성분(DM)과 원료 구성을 집사님 눈높이로 정리했어요.`;
+  return edgeCache({
+    request,
+    cacheKeyUrl,
+    ttlSeconds: 600,
+    buildResponse: async () => {
+      const row = await env.KIB_D1
+        .prepare(`
+          SELECT slug, name, brand, life_stage,
+                 crude_protein, crude_fat, calcium, phosphorus, ash, crude_fiber, moisture,
+                 ingredients_json, updated_at
+          FROM foods
+          WHERE slug = ?
+        `)
+        .bind(slug)
+        .first();
 
-  // ✅ Canonical: 절대 URL 권장
-  const canonical = new URL(request.url);
-  canonical.pathname = `/food/${encodeURIComponent(slug)}`;
-  canonical.search = "";
-  canonical.hash = "";
+      if (!row){
+        return okHtml(renderNotFound(slug, request), { status: 404, headers: { "cache-control": "no-store" } });
+      }
 
-  const ogImage = getOgImageUrl(request);
+      const ingredients = safeJson(row.ingredients_json, []);
 
-  const html = `<!doctype html>
+      const title = `${row.name} 분석 | 키블핏`;
+      const desc  = `${row.name}의 보증성분(라벨)과 원료 구성을 한눈에 정리했어요.`;
+
+      const canonical = new URL(request.url);
+      canonical.pathname = `/food/${encodeURIComponent(slug)}`;
+      canonical.search = "";
+      canonical.hash = "";
+
+      const ogImage = getOgImageUrl(request);
+
+      const html = `<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- ✅ Title / Description -->
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(desc)}" />
-
-  <!-- ✅ Canonical (절대 URL) -->
   <link rel="canonical" href="${escapeHtml(canonical.toString())}" />
 
-  <!-- ✅ Robots -->
   <meta name="robots" content="index,follow" />
-  <meta name="googlebot" content="index,follow" />
+  <meta name="theme-color" content="#5B7CFF" />
 
-  <!-- ✅ Open Graph -->
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="키블핏" />
   <meta property="og:locale" content="ko_KR" />
@@ -56,24 +73,15 @@ export async function onRequestGet({ params, env, request }){
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(desc)}" />
   <meta property="og:image" content="${escapeHtml(ogImage)}" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="${escapeHtml(`${row.name} 사료 분석 썸네일`)}" />
 
-  <!-- ✅ Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(desc)}" />
   <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
 
-  <!-- ✅ Theme -->
-  <meta name="theme-color" content="#5B7CFF" />
-
-  <!-- ✅ Styles -->
   <link rel="stylesheet" href="/assets/css/app.css" />
   <link rel="stylesheet" href="/assets/css/components.css" />
 
-  <!-- ✅ Structured Data (강화 버전) -->
   ${jsonld({
     "@context": "https://schema.org",
     "@type": "Article",
@@ -83,11 +91,7 @@ export async function onRequestGet({ params, env, request }){
     "dateModified": row.updated_at,
     "datePublished": row.updated_at,
     "author": { "@type": "Organization", "name": "키블핏" },
-    "publisher": {
-      "@type": "Organization",
-      "name": "키블핏",
-      "logo": { "@type": "ImageObject", "url": ogImage }
-    },
+    "publisher": { "@type": "Organization", "name": "키블핏", "logo": { "@type": "ImageObject", "url": ogImage } },
     "image": [ogImage]
   })}
 </head>
@@ -98,24 +102,34 @@ export async function onRequestGet({ params, env, request }){
 
   <main class="container">
     <section class="card" style="display:flex;flex-direction:column;gap:10px">
-      <div class="row">
+      <div class="row" style="flex-wrap:wrap">
         <span class="badge">SSR</span>
         <span class="badge">${escapeHtml(row.brand || "브랜드")}</span>
+        ${row.life_stage ? `<span class="badge">급여연령 ${escapeHtml(row.life_stage)}</span>` : ``}
         <span class="badge">업데이트 ${escapeHtml(String(row.updated_at||"").slice(0,10) || "")}</span>
       </div>
 
       <h1 class="h1">${escapeHtml(row.name)}</h1>
-      <p class="p">이 페이지는 요청 시 Functions가 DB에서 읽어 <b>HTML을 즉시 생성</b>합니다.</p>
+      <p class="p">이 페이지는 DB에서 읽어 <b>HTML을 생성(SSR)</b>하고, 엣지에 캐시됩니다. (Response Headers에서 <b>x-kib-cache</b> 확인)</p>
+
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <a class="btn" href="/edit.html?slug=${encodeURIComponent(slug)}">이 사료 수정하기</a>
+        <a class="btn" href="/foods/">목록으로</a>
+      </div>
     </section>
 
     <section class="grid grid--2" style="margin-top:14px">
       <section class="card" style="display:flex;flex-direction:column;gap:10px">
-        <h2 class="h2">보증성분(DM, 샘플)</h2>
-        ${kv("단백질(DM)", `${num(row.protein_dm)}%`)}
-        ${kv("지방(DM)", `${num(row.fat_dm)}%`)}
-        ${kv("탄수화물(DM)", `${num(row.carb_dm)}%`)}
+        <h2 class="h2">보증성분(라벨 %)</h2>
+        ${kv("조단백질", pct(row.crude_protein))}
+        ${kv("조지방", pct(row.crude_fat))}
+        ${kv("칼슘", pct(row.calcium))}
+        ${kv("인", pct(row.phosphorus))}
+        ${kv("조회분", pct(row.ash))}
+        ${kv("조섬유", pct(row.crude_fiber))}
+        ${kv("수분", pct(row.moisture))}
         <div class="sep"></div>
-        <p class="small">다음 단계: add 저장 시점에 칼로리/g/Mcal/문구까지 미리 계산해 DB에 같이 저장하면 비용이 줄어요.</p>
+        <p class="small">* 라벨 표기 기준(As-fed %)입니다. (DM 변환/칼로리 계산은 다음 단계에서 추가 가능)</p>
       </section>
 
       <section class="card" style="display:flex;flex-direction:column;gap:10px">
@@ -125,7 +139,7 @@ export async function onRequestGet({ params, env, request }){
         <div class="notice">
           <strong>안내</strong>
           <div class="sep"></div>
-          <div class="small">키블핏은 사료가 좋다/나쁘다를 단정하기보다 비교·이해를 돕는 참고용 가이드로 설계하는 것을 권장합니다.</div>
+          <div class="small">키블핏은 제조사 라벨 기반으로 정보를 정리하는 참고용 가이드입니다.</div>
         </div>
       </section>
     </section>
@@ -137,24 +151,29 @@ export async function onRequestGet({ params, env, request }){
 </body>
 </html>`;
 
-  return new Response(html, {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      // ✅ 개발 단계 기본 캐시. 운영 시 5~30분 등으로 조절 가능
-      "cache-control": "public, max-age=60"
+      const res = okHtml(html, {
+        headers: {
+          "cache-control": "public, max-age=600"
+        }
+      });
+      res.headers.set("x-kib-cache-version", updatedAt);
+      return res;
     }
   });
 }
 
 function getOgImageUrl(request){
   const origin = new URL(request.url).origin;
-  // ✅ 여기에 기본 OG 이미지를 둬주세요:
-  // public/assets/images/og-default.png (1200x630 권장)
   return `${origin}/assets/images/og-default.png`;
 }
 
 function safeJson(s, fallback){ try { return JSON.parse(s); } catch { return fallback; } }
 function num(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
+function pct(v){
+  const n = num(v);
+  // 0이면 "—"로 보이게 하고 싶으면 여기서 조정 가능
+  return `${n}%`;
+}
 
 function kv(k, v){
   return `<div class="row" style="justify-content:space-between">
