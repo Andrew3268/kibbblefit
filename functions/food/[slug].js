@@ -25,7 +25,7 @@ export async function onRequestGet({ params, env, request }){
   return edgeCache({
     request,
     cacheKeyUrl,
-    ttlSeconds: 600,
+    ttlSeconds: 300,
     buildResponse: async () => {
       const row = await env.KIB_D1
         .prepare(`

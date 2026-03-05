@@ -135,7 +135,7 @@ async function save(){
     status.textContent = "저장 완료! 이동 중…";
 
     // 상세 페이지 이동
-    location.href = `/food/${encodeURIComponent(slug)}`;
+    location.href = `/food/${encodeURIComponent(slug)}?v=${Date.now()}`;
 
   }catch(e){
 
