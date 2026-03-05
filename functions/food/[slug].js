@@ -147,13 +147,13 @@ export async function onRequestGet({ params, env, request }){
         <div class="sep"></div>
 
         <h2 class="h2">Dry Matter 기준 영양</h2>
-        ${kv("단백질 (DM)", formatPct(nutrition.dm.protein))}
-        ${kv("지방 (DM)", formatPct(nutrition.dm.fat))}
-        ${kv("탄수화물 추정 (DM)", formatPct(nutrition.dm.carbs))}
-        ${kv("조섬유 (DM)", formatPct(nutrition.dm.fiber))}
-        ${kv("조회분 (DM)", formatPct(nutrition.dm.ash))}
-        ${kv("칼슘 (DM)", formatPct(nutrition.dm.calcium))}
-        ${kv("인 (DM)", formatPct(nutrition.dm.phosphorus))}
+        ${kv("단백질 (DM)", formatPct(nutrition?.dm?.protein))}
+        ${kv("지방 (DM)", formatPct(nutrition?.dm?.fat))}
+        ${kv("탄수화물 추정 (DM)", formatPct(nutrition?.dm?.carbs))}
+        ${kv("조섬유 (DM)", formatPct(nutrition?.dm?.fiber))}
+        ${kv("조회분 (DM)", formatPct(nutrition?.dm?.ash))}
+        ${kv("칼슘 (DM)", formatPct(nutrition?.dm?.calcium))}
+        ${kv("인 (DM)", formatPct(nutrition?.dm?.phosphorus))}
       </section>
 
       <section class="card" style="display:flex;flex-direction:column;gap:10px">
