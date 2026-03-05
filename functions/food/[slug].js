@@ -1,7 +1,5 @@
-console.log("calculateNutrition:", calculateNutrition);
-
 import { escapeHtml, jsonld, okHtml, edgeCache } from "../_utils.js";
-import { calculateNutrition } from "../lib/nutrition/nutritionCalc.js";
+import { calculateNutrition } from "../../lib/nutrition/nutritionCalc.js";
 
 export async function onRequestGet({ params, env, request }){
   // const slug = String(params.slug || "");
@@ -57,6 +55,9 @@ export async function onRequestGet({ params, env, request }){
         calcium: row.calcium,
         phosphorus: row.phosphorus
       });
+
+      console.log("row:", row);
+      console.log("nutrition:", nutrition);
 
       const title = `${row.name} 분석 | 키블핏`;
       const desc  = `${row.name}의 보증성분(라벨)과 원료 구성을 한눈에 정리했어요.`;
