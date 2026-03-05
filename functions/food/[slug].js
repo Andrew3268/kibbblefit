@@ -1,4 +1,5 @@
 import { escapeHtml, jsonld, okHtml, edgeCache } from "../_utils.js";
+import { calculateNutrition } from "../../lib/nutrition/nutritionCalc.js";
 
 export async function onRequestGet({ params, env, request }){
   // const slug = String(params.slug || "");
@@ -44,6 +45,17 @@ export async function onRequestGet({ params, env, request }){
 
       const ingredients = safeJson(row.ingredients_json, []);
 
+      //DM 및 추정 탄수화물 영양 계산 실행
+      const nutrition = calculateNutrition({
+        protein: row.crude_protein,
+        fat: row.crude_fat,
+        fiber: row.crude_fiber,
+        ash: row.ash,
+        moisture: row.moisture,
+        calcium: row.calcium,
+        phosphorus: row.phosphorus
+      });
+
       const title = `${row.name} 분석 | 키블핏`;
       const desc  = `${row.name}의 보증성분(라벨)과 원료 구성을 한눈에 정리했어요.`;
 
@@ -53,45 +65,6 @@ export async function onRequestGet({ params, env, request }){
       canonical.hash = "";
 
       const ogImage = getOgImageUrl(request);
-
-      // -----------------------------
-      // 보증성분 데이터
-      // -----------------------------
-
-      const protein = Number(row.crude_protein || 0);
-      const fat = Number(row.crude_fat || 0);
-      const fiber = Number(row.crude_fiber || 0);
-      const ash = Number(row.ash || 0);
-      const moisture = Number(row.moisture || 0);
-      const calcium = Number(row.calcium || 0);
-      const phosphorus = Number(row.phosphorus || 0);
-
-      // -----------------------------
-      // 추정 탄수화물 (As-fed)
-      // -----------------------------
-
-      const carbsAF = Math.max(
-        0,
-        100 - protein - fat - fiber - ash - moisture
-      );
-
-      // -----------------------------
-      // Dry Matter 계산
-      // -----------------------------
-
-      const dmFactor = moisture < 100 ? 100 / (100 - moisture) : 0;
-
-      const dmProtein = (protein * dmFactor).toFixed(1);
-      const dmFat = (fat * dmFactor).toFixed(1);
-      const dmFiber = (fiber * dmFactor).toFixed(1);
-      const dmAsh = (ash * dmFactor).toFixed(1);
-      const dmCalcium = (calcium * dmFactor).toFixed(2);
-      const dmPhosphorus = (phosphorus * dmFactor).toFixed(2);
-      const dmCarbs = (carbsAF * dmFactor).toFixed(1);
-
-    // -----------------------------
-    // HTML 생성
-    // -----------------------------
 
       const html = `<!doctype html>
 <html lang="ko">
@@ -174,16 +147,13 @@ export async function onRequestGet({ params, env, request }){
         <div class="sep"></div>
 
         <h2 class="h2">Dry Matter 기준 영양</h2>
-        ${kv("단백질 (DM)", dmProtein + "%")}
-        ${kv("지방 (DM)", dmFat + "%")}
-        ${kv("탄수화물 추정 (DM)", dmCarbs + "%")}
-        ${kv("조섬유 (DM)", dmFiber + "%")}
-        ${kv("조회분 (DM)", dmAsh + "%")}
-        ${kv("칼슘 (DM)", dmCalcium + "%")}
-        ${kv("인 (DM)", dmPhosphorus + "%")}
-        <div class="sep"></div>
-        <p class="small">* Dry Matter 기준은 수분을 제외하고 계산한 영양 비율입니다.</p>
-
+        ${kv("단백질 (DM)", nutrition.dm.protein.toFixed(1) + "%")}
+        ${kv("지방 (DM)", nutrition.dm.fat.toFixed(1) + "%")}
+        ${kv("탄수화물 추정 (DM)", nutrition.dm.carbs.toFixed(1) + "%")}
+        ${kv("조섬유 (DM)", nutrition.dm.fiber.toFixed(1) + "%")}
+        ${kv("조회분 (DM)", nutrition.dm.ash.toFixed(1) + "%")}
+        ${kv("칼슘 (DM)", nutrition.dm.calcium.toFixed(2) + "%")}
+        ${kv("인 (DM)", nutrition.dm.phosphorus.toFixed(2) + "%")}
       </section>
 
       <section class="card" style="display:flex;flex-direction:column;gap:10px">
