@@ -54,6 +54,45 @@ export async function onRequestGet({ params, env, request }){
 
       const ogImage = getOgImageUrl(request);
 
+      // -----------------------------
+      // 보증성분 데이터
+      // -----------------------------
+
+      const protein = Number(row.crude_protein || 0);
+      const fat = Number(row.crude_fat || 0);
+      const fiber = Number(row.crude_fiber || 0);
+      const ash = Number(row.ash || 0);
+      const moisture = Number(row.moisture || 0);
+      const calcium = Number(row.calcium || 0);
+      const phosphorus = Number(row.phosphorus || 0);
+
+      // -----------------------------
+      // 추정 탄수화물 (As-fed)
+      // -----------------------------
+
+      const carbsAF = Math.max(
+        0,
+        100 - protein - fat - fiber - ash - moisture
+      );
+
+      // -----------------------------
+      // Dry Matter 계산
+      // -----------------------------
+
+      const dmFactor = moisture < 100 ? 100 / (100 - moisture) : 0;
+
+      const dmProtein = (protein * dmFactor).toFixed(1);
+      const dmFat = (fat * dmFactor).toFixed(1);
+      const dmFiber = (fiber * dmFactor).toFixed(1);
+      const dmAsh = (ash * dmFactor).toFixed(1);
+      const dmCalcium = (calcium * dmFactor).toFixed(2);
+      const dmPhosphorus = (phosphorus * dmFactor).toFixed(2);
+      const dmCarbs = (carbsAF * dmFactor).toFixed(1);
+
+    // -----------------------------
+    // HTML 생성
+    // -----------------------------
+
       const html = `<!doctype html>
 <html lang="ko">
 <head>
@@ -131,6 +170,20 @@ export async function onRequestGet({ params, env, request }){
         ${kv("수분", pct(row.moisture))}
         <div class="sep"></div>
         <p class="small">* 라벨 표기 기준(As-fed %)입니다. (DM 변환/칼로리 계산은 다음 단계에서 추가 가능)</p>
+
+        <div class="sep"></div>
+
+        <h2 class="h2">Dry Matter 기준 영양</h2>
+        ${kv("단백질 (DM)", dmProtein + "%")}
+        ${kv("지방 (DM)", dmFat + "%")}
+        ${kv("탄수화물 추정 (DM)", dmCarbs + "%")}
+        ${kv("조섬유 (DM)", dmFiber + "%")}
+        ${kv("조회분 (DM)", dmAsh + "%")}
+        ${kv("칼슘 (DM)", dmCalcium + "%")}
+        ${kv("인 (DM)", dmPhosphorus + "%")}
+        <div class="sep"></div>
+        <p class="small">* Dry Matter 기준은 수분을 제외하고 계산한 영양 비율입니다.</p>
+
       </section>
 
       <section class="card" style="display:flex;flex-direction:column;gap:10px">
