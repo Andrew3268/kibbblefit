@@ -1,7 +1,7 @@
 import { okJson } from "../../_utils.js";
 
 export async function onRequestGet({ env, params }){
-  const slug = String(params.slug || "");
+  const slug = decodeURIComponent(String(params.slug || ""));
   if (!slug) return okJson({ message: "slug가 필요해요." }, { status: 400 });
 
   const row = await env.KIB_D1
@@ -22,7 +22,7 @@ export async function onRequestGet({ env, params }){
 
 // Update – used by edit.html
 export async function onRequestPut({ env, params, request }){
-  const slug = String(params.slug || "");
+  const slug = decodeURIComponent(String(params.slug || ""));
   if (!slug) return okJson({ message: "slug가 필요해요." }, { status: 400 });
 
   const body = await request.json().catch(() => null);
