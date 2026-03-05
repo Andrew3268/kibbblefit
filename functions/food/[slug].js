@@ -1,5 +1,7 @@
+console.log("calculateNutrition:", calculateNutrition);
+
 import { escapeHtml, jsonld, okHtml, edgeCache } from "../_utils.js";
-import { calculateNutrition } from "../../lib/nutrition/nutritionCalc.js";
+import { calculateNutrition } from "../lib/nutrition/nutritionCalc.js";
 
 export async function onRequestGet({ params, env, request }){
   // const slug = String(params.slug || "");
