@@ -156,9 +156,22 @@ export async function onRequestGet({ params, env, request }){
         <div class="sep"></div>
 
         <h2 class="h2">추정 칼로리</h2>
-        ${kv("추정 칼로리", Math.round(calories.kcalPerKg).toLocaleString("ko-KR") + " kcal/kg")}
+        ${kv("추정 칼로리", calories.kcal.totalPerKg.toLocaleString("ko-KR") + " kcal/kg")}
+        ${kv("100g당 칼로리", calories.kcal.totalPer100g.toLocaleString("ko-KR") + " kcal/100g")}
         ${kv("추정 탄수화물", calories.asFed.carbs.toFixed(1) + "%")}
-        <p class="small">* 수정 Atwater 계수 기준 추정값입니다. 단백질 3.5 / 지방 8.5 / 탄수화물 3.5 kcal/g</p>
+
+        <div class="sep"></div>
+
+        <h2 class="h2">PFC 비율</h2>
+        ${kv("단백질 칼로리", calories.pfc.protein.kcalPer100g.toFixed(1) + " kcal")}
+        ${kv("단백질 비율", calories.pfc.protein.ratio.toFixed(1) + "%")}
+        ${kv("지방 칼로리", calories.pfc.fat.kcalPer100g.toFixed(1) + " kcal")}
+        ${kv("지방 비율", calories.pfc.fat.ratio.toFixed(1) + "%")}
+        ${kv("탄수화물 칼로리", calories.pfc.carbs.kcalPer100g.toFixed(1) + " kcal")}
+        ${kv("탄수화물 비율", calories.pfc.carbs.ratio.toFixed(1) + "%")}
+
+        <p class="small">* 칼로리 계산은 AAFCO에서 널리 사용하는 Modified Atwater 기준 추정 방식입니다.</p>
+
 
         <div class="sep"></div>
 
