@@ -1,6 +1,7 @@
 import { escapeHtml, jsonld, okHtml, edgeCache } from "../_utils.js";
 import { calculateNutrition } from "../../lib/nutrition/nutritionCalc.js";
 import { calculateEstimatedCalories } from "../../lib/nutrition/calorieCalc.js";
+import { calculateNutrientDensity } from "../../lib/nutrition/densityCalc.js";
 
 export async function onRequestGet({ params, env, request }){
   // const slug = String(params.slug || "");
@@ -57,6 +58,7 @@ export async function onRequestGet({ params, env, request }){
         phosphorus: row.phosphorus
       });
 
+      //추정 칼로리 계산 실행
       const calories = calculateEstimatedCalories({
         protein: row.crude_protein,
         fat: row.crude_fat,
@@ -64,6 +66,17 @@ export async function onRequestGet({ params, env, request }){
         ash: row.ash,
         moisture: row.moisture
       });
+
+      //영양소 밀도 계산 실행
+      const density = calculateNutrientDensity({
+        protein: row.crude_protein,
+        fat: row.crude_fat,
+        fiber: row.crude_fiber,
+        ash: row.ash,
+        moisture: row.moisture,
+        kcalPerKg: calories.kcalPerKg
+      });
+
 
       const title = `${row.name} 분석 | 키블핏`;
       const desc  = `${row.name}의 보증성분(라벨)과 원료 구성을 한눈에 정리했어요.`;
@@ -153,6 +166,15 @@ export async function onRequestGet({ params, env, request }){
         <div class="sep"></div>
         <p class="small">* 라벨 표기 기준(As-fed %)입니다.</p>
 
+        <h2 class="h2">Dry Matter 기준 영양</h2>
+        ${kv("단백질 (DM)", nutrition.dm.protein.toFixed(1) + "%")}
+        ${kv("지방 (DM)", nutrition.dm.fat.toFixed(1) + "%")}
+        ${kv("탄수화물 추정 (DM)", nutrition.dm.carbs.toFixed(1) + "%")}
+        ${kv("조섬유 (DM)", nutrition.dm.fiber.toFixed(1) + "%")}
+        ${kv("조회분 (DM)", nutrition.dm.ash.toFixed(1) + "%")}
+        ${kv("칼슘 (DM)", nutrition.dm.calcium.toFixed(2) + "%")}
+        ${kv("인 (DM)", nutrition.dm.phosphorus.toFixed(2) + "%")}
+
         <div class="sep"></div>
 
         <h2 class="h2">추정 칼로리</h2>
@@ -172,17 +194,14 @@ export async function onRequestGet({ params, env, request }){
 
         <p class="small">* 칼로리 계산은 AAFCO에서 널리 사용하는 Modified Atwater 기준 추정 방식입니다.</p>
 
-
         <div class="sep"></div>
 
-        <h2 class="h2">Dry Matter 기준 영양</h2>
-        ${kv("단백질 (DM)", nutrition.dm.protein.toFixed(1) + "%")}
-        ${kv("지방 (DM)", nutrition.dm.fat.toFixed(1) + "%")}
-        ${kv("탄수화물 추정 (DM)", nutrition.dm.carbs.toFixed(1) + "%")}
-        ${kv("조섬유 (DM)", nutrition.dm.fiber.toFixed(1) + "%")}
-        ${kv("조회분 (DM)", nutrition.dm.ash.toFixed(1) + "%")}
-        ${kv("칼슘 (DM)", nutrition.dm.calcium.toFixed(2) + "%")}
-        ${kv("인 (DM)", nutrition.dm.phosphorus.toFixed(2) + "%")}
+        <h2 class="h2">영양소 밀도</h2>
+        ${kv("단백질 밀도", density.density.protein.toFixed(1) + " g/Mcal")}
+        ${kv("지방 밀도", density.density.fat.toFixed(1) + " g/Mcal")}
+        ${kv("탄수화물 밀도", density.density.carbs.toFixed(1) + " g/Mcal")}
+        <p class="small">* 영양소 밀도는 1000kcal(Mcal)당 각 영양소를 몇 g 섭취하게 되는지 보여주는 값입니다.</p>
+
       </section>
 
       <section class="card" style="display:flex;flex-direction:column;gap:10px">
