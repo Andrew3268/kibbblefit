@@ -56,9 +56,6 @@ export async function onRequestGet({ params, env, request }){
         phosphorus: row.phosphorus
       });
 
-      console.log("row:", row);
-      console.log("nutrition:", nutrition);
-
       const title = `${row.name} 분석 | 키블핏`;
       const desc  = `${row.name}의 보증성분(라벨)과 원료 구성을 한눈에 정리했어요.`;
 
@@ -150,13 +147,13 @@ export async function onRequestGet({ params, env, request }){
         <div class="sep"></div>
 
         <h2 class="h2">Dry Matter 기준 영양</h2>
-        ${kv("단백질 (DM)", formatPct(nutrition?.dm?.protein))}
-        ${kv("지방 (DM)", formatPct(nutrition?.dm?.fat))}
-        ${kv("탄수화물 추정 (DM)", formatPct(nutrition?.dm?.carbs))}
-        ${kv("조섬유 (DM)", formatPct(nutrition?.dm?.fiber))}
-        ${kv("조회분 (DM)", formatPct(nutrition?.dm?.ash))}
-        ${kv("칼슘 (DM)", formatPct(nutrition?.dm?.calcium))}
-        ${kv("인 (DM)", formatPct(nutrition?.dm?.phosphorus))}
+        ${kv("단백질 (DM)", nutrition.dm.protein.toFixed(1) + "%")}
+        ${kv("지방 (DM)", nutrition.dm.fat.toFixed(1) + "%")}
+        ${kv("탄수화물 추정 (DM)", nutrition.dm.carbs.toFixed(1) + "%")}
+        ${kv("조섬유 (DM)", nutrition.dm.fiber.toFixed(1) + "%")}
+        ${kv("조회분 (DM)", nutrition.dm.ash.toFixed(1) + "%")}
+        ${kv("칼슘 (DM)", nutrition.dm.calcium.toFixed(2) + "%")}
+        ${kv("인 (DM)", nutrition.dm.phosphorus.toFixed(2) + "%")}
       </section>
 
       <section class="card" style="display:flex;flex-direction:column;gap:10px">
@@ -196,10 +193,10 @@ function getOgImageUrl(request){
 
 function safeJson(s, fallback){ try { return JSON.parse(s); } catch { return fallback; } }
 function num(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
-function formatPct(v){
-  const n = Number(v);
-  if(!Number.isFinite(n)) return "—";
-  return n.toFixed(1) + "%";
+function pct(v){
+  const n = num(v);
+  // 0이면 "—"로 보이게 하고 싶으면 여기서 조정 가능
+  return `${n}%`;
 }
 
 function kv(k, v){
