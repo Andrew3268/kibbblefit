@@ -1,5 +1,6 @@
 import { escapeHtml, jsonld, okHtml, edgeCache } from "../_utils.js";
 import { calculateNutrition } from "../../lib/nutrition/nutritionCalc.js";
+import { calculateEstimatedCalories } from "../../lib/nutrition/calorieCalc.js";
 
 export async function onRequestGet({ params, env, request }){
   // const slug = String(params.slug || "");
@@ -54,6 +55,14 @@ export async function onRequestGet({ params, env, request }){
         moisture: row.moisture,
         calcium: row.calcium,
         phosphorus: row.phosphorus
+      });
+
+      const calories = calculateEstimatedCalories({
+        protein: row.crude_protein,
+        fat: row.crude_fat,
+        fiber: row.crude_fiber,
+        ash: row.ash,
+        moisture: row.moisture
       });
 
       const title = `${row.name} 분석 | 키블핏`;
@@ -142,7 +151,14 @@ export async function onRequestGet({ params, env, request }){
         ${kv("조섬유", pct(row.crude_fiber))}
         ${kv("수분", pct(row.moisture))}
         <div class="sep"></div>
-        <p class="small">* 라벨 표기 기준(As-fed %)입니다. (DM 변환/칼로리 계산은 다음 단계에서 추가 가능)</p>
+        <p class="small">* 라벨 표기 기준(As-fed %)입니다.</p>
+
+        <div class="sep"></div>
+
+        <h2 class="h2">추정 칼로리</h2>
+        ${kv("추정 칼로리", Math.round(calories.kcalPerKg).toLocaleString("ko-KR") + " kcal/kg")}
+        ${kv("추정 탄수화물", calories.asFed.carbs.toFixed(1) + "%")}
+        <p class="small">* 수정 Atwater 계수 기준 추정값입니다. 단백질 3.5 / 지방 8.5 / 탄수화물 3.5 kcal/g</p>
 
         <div class="sep"></div>
 
